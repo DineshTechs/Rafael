@@ -435,8 +435,7 @@ contract StakingRewards is Owned, Pausable {
         uint256 lockTime1;  
         uint256 lockTime2;  
         uint256 lockTime3;  
-        uint256 lockTime4;  
-      
+        uint256 lockTime4;        
     }
 
     mapping(address => uint256) public rewardsBeforeNewStake1;
@@ -510,34 +509,34 @@ contract StakingRewards is Owned, Pausable {
     }
     
     function IntervalRewardsOf1(address account) public view returns (uint256) {
-         uint256 amount = user[account].stakedBal1;
-         uint256 timeDiff = getTime().sub(user[account].stakeTime1);
-         uint256 intervals = timeDiff.div(rewardInterval);
-         uint256 perIntervalReward = amount.div(3300); // 0.030% daily(approx)
+        uint256 amount = user[account].stakedBal1;
+        uint256 timeDiff = getTime().sub(user[account].stakeTime1);
+        uint256 intervals = timeDiff.div(rewardInterval);
+        uint256 perIntervalReward = amount.div(3300); // 0.030% daily(approx)
         return intervals.mul(perIntervalReward);
     }
 
     function IntervalRewardsOf2(address account) public view returns (uint256) {
-         uint256 amount = user[account].stakedBal2;
-         uint256 timeDiff = getTime().sub(user[account].stakeTime2);
-         uint256 intervals = timeDiff.div(rewardInterval);
-         uint256 perIntervalReward = amount.div(2000); // 0.5% daily
+        uint256 amount = user[account].stakedBal2;
+        uint256 timeDiff = getTime().sub(user[account].stakeTime2);
+        uint256 intervals = timeDiff.div(rewardInterval);
+        uint256 perIntervalReward = amount.div(2000); // 0.5% daily
         return intervals.mul(perIntervalReward);
     }
 
     function IntervalRewardsOf3(address account) public view returns (uint256) {
-         uint256 amount = user[account].stakedBal3;
-         uint256 timeDiff = getTime().sub(user[account].stakeTime3);
-         uint256 intervals = timeDiff.div(rewardInterval);
-         uint256 perIntervalReward = amount.div(1000); // 0.1% daily
+        uint256 amount = user[account].stakedBal3;
+        uint256 timeDiff = getTime().sub(user[account].stakeTime3);
+        uint256 intervals = timeDiff.div(rewardInterval);
+        uint256 perIntervalReward = amount.div(1000); // 0.1% daily
         return intervals.mul(perIntervalReward);
     }
 
     function IntervalRewardsOf4(address account) public view returns (uint256) {
-         uint256 amount = user[account].stakedBal4;
-         uint256 timeDiff = getTime().sub(user[account].stakeTime4);
-         uint256 intervals = timeDiff.div(rewardInterval);
-         uint256 perIntervalReward = amount.div(400); // 0.25% daily
+        uint256 amount = user[account].stakedBal4;
+        uint256 timeDiff = getTime().sub(user[account].stakeTime4);
+        uint256 intervals = timeDiff.div(rewardInterval);
+        uint256 perIntervalReward = amount.div(400); // 0.25% daily
         return intervals.mul(perIntervalReward);
     }
     
@@ -606,7 +605,7 @@ contract StakingRewards is Owned, Pausable {
         uint256 tax;
         uint256 rewards = IntervalRewardsOf1(msg.sender);
         rewards = rewards + rewardsBeforeNewStake1[msg.sender];
-        require(rewards > 0, "Account does not have reward balance staked");        
+        require(rewards > 100, "Account does not minimum reward balance!");        
         ////////////////////////////////////////////
         uint256 timeDiff = getTime().sub(user[msg.sender].stakeTime1);
         uint256 intervals = timeDiff.div(rewardInterval);
@@ -629,7 +628,7 @@ contract StakingRewards is Owned, Pausable {
         uint256 tax;
         uint256 rewards = IntervalRewardsOf2(msg.sender);
         rewards = rewards + rewardsBeforeNewStake2[msg.sender];
-        require(rewards > 0, "Account does not have reward balance staked");        
+        require(rewards > 100, "Account does not minimum reward balance!");        
         ////////////////////////////////////////////
         uint256 timeDiff = getTime().sub(user[msg.sender].stakeTime2);
         uint256 intervals = timeDiff.div(rewardInterval);
@@ -652,7 +651,7 @@ contract StakingRewards is Owned, Pausable {
         uint256 tax;
         uint256 rewards = IntervalRewardsOf3(msg.sender);
         rewards = rewards + rewardsBeforeNewStake3[msg.sender];
-        require(rewards > 0, "Account does not have reward balance staked");        
+        require(rewards > 100, "Account does not minimum reward balance!");        
         ////////////////////////////////////////////
         uint256 timeDiff = getTime().sub(user[msg.sender].stakeTime3);
         uint256 intervals = timeDiff.div(rewardInterval);
@@ -675,7 +674,7 @@ contract StakingRewards is Owned, Pausable {
         uint256 tax;
         uint256 rewards = IntervalRewardsOf4(msg.sender);
         rewards = rewards + rewardsBeforeNewStake4[msg.sender];
-        require(rewards > 0, "Account does not have reward balance staked");        
+        require(rewards > 100, "Account does not minimum reward balance!");        
         ////////////////////////////////////////////
         uint256 timeDiff = getTime().sub(user[msg.sender].stakeTime4);
         uint256 intervals = timeDiff.div(rewardInterval);

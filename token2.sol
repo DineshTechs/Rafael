@@ -676,7 +676,9 @@ contract LCARBON is Context, Ownable, IERC20, ERC20Detailed {
         _balances[_owner] = _totalSupply;
 
         IPancakeRouter02 _pancakeV2Router = IPancakeRouter02(
-            0x10ED43C718714eb63d5aA57B78B54704E256024E
+           // 0x10ED43C718714eb63d5aA57B78B54704E256024E // mainnet router
+             0xD99D1c33F9fC3444f8101754aBC46c52416550D1 //testnet router
+
         );
         // Create a uniswap pair for this new token
         pancakeV2Pair = IPancakeFactory(_pancakeV2Router.factory())

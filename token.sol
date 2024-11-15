@@ -324,8 +324,6 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     mapping(address => uint256) private _lastBuy;
     mapping(address => uint256) private _lastSell;
 
-    uint256 public goldPrice;
-
     uint256 internal _totalSupply;
 
     uint256 public transactionFee;   
@@ -360,7 +358,8 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         excludedFromTradeLimit(msg.sender, true);
         excludedFromTradeLimit(address(this), true);
 
-        gold_usd_price_feed = AggregatorV3Interface(0x86896fEB19D8A607c3b11f2aF50A0f239Bd71CD0); //mainnet chainlink
+        gold_usd_price_feed = AggregatorV3Interface(0x4E08A779a85d28Cc96515379903A6029487CEbA0); // testnet chainlink
+        //gold_usd_price_feed = AggregatorV3Interface(0x86896fEB19D8A607c3b11f2aF50A0f239Bd71CD0); //mainnet chainlink  
         emit Transfer(address(0), _msgSender(), _totalSupply);
     }
 
@@ -369,7 +368,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         return oneTokenPrice;
     }
 
-    function oneTonGoldPrice() public view returns(uint){ 
+    function oneTonGoldPrice() public view returns(uint){
         return getCurrentGoldPriceFromChainLink().mul(35274); // 1 ton == 35274 ounce
     }
 
