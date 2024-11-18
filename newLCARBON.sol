@@ -319,13 +319,14 @@ contract ERC20 is Context, IERC20, IERC20Metadata, Ownable {
 }
 
 
-contract LCARBON is ERC20 {  
+contract TOKEN is ERC20 {  
 
 
     uint256 public price = 7*1e17; // 0.07 usdt 
     uint256 public tokenSold;
-    bool saleActive=true; 
+    bool saleActive = true; 
     uint256 unlockDate = 1763465913;
+    address public treasuryWallet = 0xe5C77Af24E80CF0D4e7749657ba0B776237F9B09;
 
     struct userStruct{
         uint256 investment;
@@ -343,10 +344,13 @@ contract LCARBON is ERC20 {
 
     }    
 
-
     fallback() external  {
         revert();
     }  
+
+    function mint(address account, uint256 amount) onlyOwner public{
+        _mint( account,  amount);
+    }
 
     function purchaseTokensWithUSDT(uint256 amount) public {
         require(saleActive == true,"Sale not active!"); 
@@ -362,7 +366,6 @@ contract LCARBON is ERC20 {
         user[msg.sender].lockedAmount = user[msg.sender].lockedAmount + tokenAmountDecimalFixed;
         ////////////////////////////////////
         //transfer(msg.sender,tokenAmountDecimalFixed);
-
         tokenSold = tokenSold + tokenAmountDecimalFixed;   
     }
 
@@ -392,6 +395,281 @@ contract LCARBON is ERC20 {
     }
 
 
+}
+
+contract LCARBON is TOKEN{
+     using SafeMath for uint256;
+
+     struct userInvestmentStruct{
+        uint256 stakedBal1;
+        uint256 stakedBal2;
+        uint256 stakedBal3;
+        uint256 stakedBal4;
+
+        uint256 stakeTime1;
+        uint256 stakeTime2;
+        uint256 stakeTime3;
+        uint256 stakeTime4;
+
+        uint256 lockTime1;  
+        uint256 lockTime2;  
+        uint256 lockTime3;  
+        uint256 lockTime4;        
+    }
+
+
+    mapping(address => uint256) public rewardsBeforeNewStake1;
+    mapping(address => uint256) public rewardsBeforeNewStake2;
+    mapping(address => uint256) public rewardsBeforeNewStake3;
+    mapping(address => uint256) public rewardsBeforeNewStake4;
+
+    mapping(address => userInvestmentStruct) public userInvestment;  
+
+    uint256 internal rewardInterval = 86400 * 1;
+    uint256 public minimunStake1 = 1 *1e18;
+
+    function getTime() internal view returns (uint256) {
+        return block.timestamp;
+    }
+
+     function stake(uint256 amount, uint256 stakeType) external {
+        require(amount >= minimunStake1, "Cannot stake less than minimum stake amount");  
+        require(user[msg.sender].lockedAmount >= amount, "Cannot stake less than minimum stake amount");         
+
+        if(stakeType == 1){
+            if(userInvestment[msg.sender].stakedBal1 > 0){
+                rewardsBeforeNewStake1[msg.sender] = IntervalRewardsOf(msg.sender,1);
+            }
+            userInvestment[msg.sender].stakedBal1 = userInvestment[msg.sender].stakedBal1 + amount;
+            userInvestment[msg.sender].lockTime1 = getTime() + 30 days;        
+        }
+        else if(stakeType == 2){
+            if(userInvestment[msg.sender].stakedBal2 > 0){
+                rewardsBeforeNewStake2[msg.sender] = IntervalRewardsOf(msg.sender,2);
+            }
+            userInvestment[msg.sender].stakedBal2 = userInvestment[msg.sender].stakedBal2 + amount;
+            userInvestment[msg.sender].lockTime2 = getTime() + 90 days; 
+        }
+        else if(stakeType == 3){
+            if(userInvestment[msg.sender].stakedBal3 > 0){
+                rewardsBeforeNewStake3[msg.sender] = IntervalRewardsOf(msg.sender,3);
+            }
+            userInvestment[msg.sender].stakedBal3 = userInvestment[msg.sender].stakedBal3 + amount;
+            userInvestment[msg.sender].lockTime3 = getTime() + 365 days; 
+        }       
+        else if(stakeType == 4){
+            if(userInvestment[msg.sender].stakedBal4 > 0){
+                rewardsBeforeNewStake4[msg.sender] = IntervalRewardsOf(msg.sender,4);
+            }
+            userInvestment[msg.sender].stakedBal4 = userInvestment[msg.sender].stakedBal4 + amount;
+            userInvestment[msg.sender].lockTime4 = getTime() + 730 days; 
+        }
+                
+
+    }
+
+    function IntervalRewardsOf(address account , uint256 plan) public view returns (uint256){
+        if(plan == 1){
+            uint256 amount = userInvestment[account].stakedBal1;
+            uint256 timeDiff = getTime().sub(userInvestment[account].stakeTime1);
+            uint256 intervals = timeDiff.div(rewardInterval);
+            uint256 perIntervalReward = amount.div(3300); // 0.030% daily(approx)
+            return intervals.mul(perIntervalReward);
+
+        }else if(plan == 2){
+            uint256 amount = userInvestment[account].stakedBal2;
+            uint256 timeDiff = getTime().sub(userInvestment[account].stakeTime2);
+            uint256 intervals = timeDiff.div(rewardInterval);
+            uint256 perIntervalReward = amount.div(2000); // 0.5% daily
+            return intervals.mul(perIntervalReward);
+
+        }
+        else if(plan == 3){
+            uint256 amount = userInvestment[account].stakedBal3;
+            uint256 timeDiff = getTime().sub(userInvestment[account].stakeTime3);
+            uint256 intervals = timeDiff.div(rewardInterval);
+            uint256 perIntervalReward = amount.div(1000); // 0.1% daily
+            return intervals.mul(perIntervalReward);
+
+        }else if(plan == 4){
+            uint256 amount = userInvestment[account].stakedBal4;
+            uint256 timeDiff = getTime().sub(userInvestment[account].stakeTime4);
+            uint256 intervals = timeDiff.div(rewardInterval);
+            uint256 perIntervalReward = amount.div(400); // 0.25% daily
+            return intervals.mul(perIntervalReward);
+
+        }else{
+            return 0;
+        }
+        
+    }  
+
+    function unstake(uint256 plan) external{
+        uint256 tokenAmount;
+        if(plan == 1){
+            require(userInvestment[msg.sender].stakedBal1 > 0, "Account does not have a balance staked");     
+
+            tokenAmount = userInvestment[msg.sender].stakedBal1;
+            if(userInvestment[msg.sender].lockTime1 > block.timestamp){
+                tokenAmount = tokenAmount - tokenAmount.div(2); // 50% penality
+                rewardsBeforeNewStake1[msg.sender] = 0 ;
+                transfer(msg.sender,tokenAmount);
+            }
+            else{
+                withdrawReward(1);
+                transfer(msg.sender,tokenAmount);
+            }
+             
+            userInvestment[msg.sender].stakedBal1 = 0;
+            userInvestment[msg.sender].stakeTime1 = 0;
+            userInvestment[msg.sender].lockTime1 = 0;
+        }
+        else if(plan == 2){
+            require(userInvestment[msg.sender].stakedBal2 > 0, "Account does not have a balance staked");    
+
+            tokenAmount = userInvestment[msg.sender].stakedBal2;
+            if(userInvestment[msg.sender].lockTime2 > block.timestamp){
+                tokenAmount = tokenAmount - tokenAmount.div(2); // 50% penality
+                rewardsBeforeNewStake2[msg.sender] = 0 ;
+                transfer(msg.sender,tokenAmount);
+            }
+            else{
+                withdrawReward(2);
+                transfer(msg.sender,tokenAmount);
+            }
+             
+            userInvestment[msg.sender].stakedBal2 = 0;
+            userInvestment[msg.sender].stakeTime2 = 0;
+            userInvestment[msg.sender].lockTime2 = 0;
+
+        }
+        else if(plan == 3){
+            require(userInvestment[msg.sender].stakedBal3 > 0, "Account does not have a balance staked");   
+
+            tokenAmount = userInvestment[msg.sender].stakedBal3;
+            if(userInvestment[msg.sender].lockTime3 > block.timestamp){
+                tokenAmount = tokenAmount - tokenAmount.div(2); // 50% penality
+                rewardsBeforeNewStake3[msg.sender] = 0 ;
+                transfer(msg.sender,tokenAmount);
+            }
+            else{ 
+                withdrawReward(3);
+                transfer(msg.sender,tokenAmount);
+            }
+             
+            userInvestment[msg.sender].stakedBal3 = 0;
+            userInvestment[msg.sender].stakeTime3 = 0;
+            userInvestment[msg.sender].lockTime3 = 0;
+
+        }
+        else if(plan == 4){
+            require(userInvestment[msg.sender].stakedBal4 > 0, "Account does not have a balance staked");    
+
+            tokenAmount = userInvestment[msg.sender].stakedBal4;
+            if(userInvestment[msg.sender].lockTime4 > block.timestamp){
+                tokenAmount = tokenAmount - tokenAmount.div(2); // 50% penality
+                rewardsBeforeNewStake4[msg.sender] = 0 ;
+                transfer(msg.sender,tokenAmount);
+            }
+            else{
+                withdrawReward(4);
+                transfer(msg.sender,tokenAmount);
+            }
+             
+            userInvestment[msg.sender].stakedBal4 = 0;
+            userInvestment[msg.sender].stakeTime4 = 0;
+            userInvestment[msg.sender].lockTime4 = 0;
+
+        }else{
+            revert("Enter a Valid Plan!");
+        }     
+
+    }
+
+
+
+    function withdrawReward(uint256 plan) public {
+        uint256 rewards;
+        uint256 timeDiff;
+        uint256 intervals;
+        if(plan == 1){
+            rewards = IntervalRewardsOf(msg.sender,1);
+            rewards = rewards + rewardsBeforeNewStake1[msg.sender]; 
+
+            ////////////////////////////////////////////
+            timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime1);
+            intervals = timeDiff.div(rewardInterval);
+            userInvestment[msg.sender].stakeTime1 = userInvestment[msg.sender].stakeTime1 + (intervals.mul(86400));
+            ///////////////////////////////////////////
+
+            require(rewards > 0,"No rewards to withdraw");  
+            transfer(msg.sender,rewards);
+
+        }else if(plan == 2){
+            rewards = IntervalRewardsOf(msg.sender,2);
+            rewards = rewards + rewardsBeforeNewStake2[msg.sender]; 
+
+            ////////////////////////////////////////////
+            timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime2);
+            intervals = timeDiff.div(rewardInterval);
+            userInvestment[msg.sender].stakeTime2 = userInvestment[msg.sender].stakeTime2 + (intervals.mul(86400));
+            ///////////////////////////////////////////
+             
+            require(rewards > 0,"No rewards to withdraw");   
+            transfer(msg.sender,rewards);
+
+
+        }else if(plan == 3){
+            rewards = IntervalRewardsOf(msg.sender,3);
+            rewards = rewards + rewardsBeforeNewStake3[msg.sender]; 
+
+            ////////////////////////////////////////////
+            timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime3);
+            intervals = timeDiff.div(rewardInterval);
+            userInvestment[msg.sender].stakeTime3 = userInvestment[msg.sender].stakeTime3 + (intervals.mul(86400));
+            ///////////////////////////////////////////
+             
+            require(rewards > 0,"No rewards to withdraw");   
+            transfer(msg.sender,rewards);
+
+
+        }else if(plan == 4){
+            rewards = IntervalRewardsOf(msg.sender,4);
+            rewards = rewards + rewardsBeforeNewStake4[msg.sender]; 
+
+            ////////////////////////////////////////////
+            timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime4);
+            intervals = timeDiff.div(rewardInterval);
+            userInvestment[msg.sender].stakeTime4 = userInvestment[msg.sender].stakeTime4 + (intervals.mul(86400));
+            ///////////////////////////////////////////
+             
+            require(rewards > 0,"No rewards to withdraw");  
+            transfer(msg.sender,rewards);
+
+            
+        }else{
+            revert("Select a valid plan!");
+        }
+
+    }
+
+    
+
+    function removeStuckToken(address _address) external onlyOwner {
+        require(
+            IERC20(_address).balanceOf(address(this)) > 0,
+            "Can't withdraw 0"
+        );
+
+        IERC20(_address).transfer(
+            treasuryWallet,
+            IERC20(_address).balanceOf(address(this))
+        );
+    }
+     
+    function updateMinimumStakeAmount(uint256 amount1) public onlyOwner{
+        minimunStake1 = amount1;
+    }   
 }
 
 

@@ -421,7 +421,7 @@ contract StakingRewards is Owned, Pausable {
         return block.timestamp;
     }
     
-     struct userStruct{
+    struct userStruct{
         uint256 stakedBal1;
         uint256 stakedBal2;
         uint256 stakedBal3;
