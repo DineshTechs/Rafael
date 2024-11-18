@@ -448,6 +448,7 @@ contract LCARBON is TOKEN{
                 rewardsBeforeNewStake1[msg.sender] = IntervalRewardsOf(msg.sender,1);
             }
             userInvestment[msg.sender].stakedBal1 = userInvestment[msg.sender].stakedBal1 + amount;
+            userInvestment[msg.sender].stakeTime1 = getTime();        
             userInvestment[msg.sender].lockTime1 = getTime() + 30 days;        
         }
         else if(stakeType == 2){
@@ -455,6 +456,7 @@ contract LCARBON is TOKEN{
                 rewardsBeforeNewStake2[msg.sender] = IntervalRewardsOf(msg.sender,2);
             }
             userInvestment[msg.sender].stakedBal2 = userInvestment[msg.sender].stakedBal2 + amount;
+            userInvestment[msg.sender].stakeTime2 = getTime();        
             userInvestment[msg.sender].lockTime2 = getTime() + 90 days; 
         }
         else if(stakeType == 3){
@@ -462,6 +464,7 @@ contract LCARBON is TOKEN{
                 rewardsBeforeNewStake3[msg.sender] = IntervalRewardsOf(msg.sender,3);
             }
             userInvestment[msg.sender].stakedBal3 = userInvestment[msg.sender].stakedBal3 + amount;
+            userInvestment[msg.sender].stakeTime3 = getTime();        
             userInvestment[msg.sender].lockTime3 = getTime() + 365 days; 
         }       
         else if(stakeType == 4){
@@ -469,6 +472,7 @@ contract LCARBON is TOKEN{
                 rewardsBeforeNewStake4[msg.sender] = IntervalRewardsOf(msg.sender,4);
             }
             userInvestment[msg.sender].stakedBal4 = userInvestment[msg.sender].stakedBal4 + amount;
+            userInvestment[msg.sender].stakeTime4 = getTime();        
             userInvestment[msg.sender].lockTime4 = getTime() + 730 days; 
         }
                 
@@ -605,6 +609,7 @@ contract LCARBON is TOKEN{
         if(plan == 1){
             rewards = IntervalRewardsOf(msg.sender,1);
             rewards = rewards + rewardsBeforeNewStake1[msg.sender]; 
+            rewardsBeforeNewStake1[msg.sender] = 0;
 
             ////////////////////////////////////////////
             timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime1);
@@ -618,7 +623,8 @@ contract LCARBON is TOKEN{
         }else if(plan == 2){
             rewards = IntervalRewardsOf(msg.sender,2);
             rewards = rewards + rewardsBeforeNewStake2[msg.sender]; 
-
+            rewardsBeforeNewStake2[msg.sender] = 0;
+            
             ////////////////////////////////////////////
             timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime2);
             intervals = timeDiff.div(rewardInterval);
@@ -632,6 +638,7 @@ contract LCARBON is TOKEN{
         }else if(plan == 3){
             rewards = IntervalRewardsOf(msg.sender,3);
             rewards = rewards + rewardsBeforeNewStake3[msg.sender]; 
+            rewardsBeforeNewStake3[msg.sender] = 0;
 
             ////////////////////////////////////////////
             timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime3);
@@ -646,6 +653,7 @@ contract LCARBON is TOKEN{
         }else if(plan == 4){
             rewards = IntervalRewardsOf(msg.sender,4);
             rewards = rewards + rewardsBeforeNewStake4[msg.sender]; 
+            rewardsBeforeNewStake4[msg.sender] = 0;
 
             ////////////////////////////////////////////
             timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime4);
