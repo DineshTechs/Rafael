@@ -325,17 +325,18 @@ contract TOKEN is ERC20 {
     uint256 public price = 7*1e17; // 0.07 usdt 
     uint256 public tokenSold;
     bool saleActive = true; 
-    uint256 unlockDate = 1763465913;
+    uint256 unlockDate = block.timestamp + 90 days; // after 3 months
     address public treasuryWallet = 0xe5C77Af24E80CF0D4e7749657ba0B776237F9B09;
+    uint256 public numberOfParticipants = 0;
 
     struct userStruct{
+        bool isExist;
         uint256 investment;
         uint256 lockedAmount;
     }
     mapping(address => userStruct) public user;
 
-    Token USDT = Token(0xA38B6aea9c5b180106F9F4ed51Ad2854A1e5aab6); // USDT Address
-    mapping(address => uint256) public usdtInvestment;
+    Token USDT = Token(0xa7d7594Cf7A7FfCdD19F98b85d9D61AA2B19b768); // USDT Address
    
     constructor() ERC20("LifeCoin Carbon", "LCARBON"){
 
@@ -355,14 +356,16 @@ contract TOKEN is ERC20 {
     function purchaseTokensWithUSDT(uint256 amount) public {
         require(saleActive == true,"Sale not active!"); 
         USDT.transferFrom(msg.sender,owner(),amount);
-        usdtInvestment[msg.sender] = usdtInvestment[msg.sender] + amount;
+        user[msg.sender].investment = user[msg.sender].investment + amount;
+        if(!user[msg.sender].isExist){
+            numberOfParticipants = numberOfParticipants + 1;
+        }
       
         amount = amount * 1e18;
         uint256 usdToTokens = SafeMath.div(amount, price);
         uint256 tokenAmountDecimalFixed = SafeMath.mul(usdToTokens,1e12);
 
         ////////////////////////////////////
-        user[msg.sender].investment = user[msg.sender].investment + amount;
         user[msg.sender].lockedAmount = user[msg.sender].lockedAmount + tokenAmountDecimalFixed;
         ////////////////////////////////////
         //transfer(msg.sender,tokenAmountDecimalFixed);
@@ -425,6 +428,7 @@ contract LCARBON is TOKEN{
 
     mapping(address => userInvestmentStruct) public userInvestment;  
 
+    uint256 public amountStillInStake = 0;
     uint256 internal rewardInterval = 86400 * 1;
     uint256 public minimunStake1 = 1 *1e18;
 
@@ -435,6 +439,9 @@ contract LCARBON is TOKEN{
      function stake(uint256 amount, uint256 stakeType) external {
         require(amount >= minimunStake1, "Cannot stake less than minimum stake amount");  
         require(user[msg.sender].lockedAmount >= amount, "Cannot stake less than minimum stake amount");         
+
+        user[msg.sender].lockedAmount = user[msg.sender].lockedAmount - amount;
+        amountStillInStake = amountStillInStake + amount;
 
         if(stakeType == 1){
             if(userInvestment[msg.sender].stakedBal1 > 0){
@@ -510,14 +517,17 @@ contract LCARBON is TOKEN{
             require(userInvestment[msg.sender].stakedBal1 > 0, "Account does not have a balance staked");     
 
             tokenAmount = userInvestment[msg.sender].stakedBal1;
+            if(amountStillInStake >= tokenAmount){
+                amountStillInStake = amountStillInStake - tokenAmount;
+            }
             if(userInvestment[msg.sender].lockTime1 > block.timestamp){
                 tokenAmount = tokenAmount - tokenAmount.div(2); // 50% penality
                 rewardsBeforeNewStake1[msg.sender] = 0 ;
-                transfer(msg.sender,tokenAmount);
+                _transfer(address(this),msg.sender,tokenAmount);
             }
             else{
                 withdrawReward(1);
-                transfer(msg.sender,tokenAmount);
+                _transfer(address(this),msg.sender,tokenAmount);
             }
              
             userInvestment[msg.sender].stakedBal1 = 0;
@@ -531,11 +541,11 @@ contract LCARBON is TOKEN{
             if(userInvestment[msg.sender].lockTime2 > block.timestamp){
                 tokenAmount = tokenAmount - tokenAmount.div(2); // 50% penality
                 rewardsBeforeNewStake2[msg.sender] = 0 ;
-                transfer(msg.sender,tokenAmount);
+                _transfer(address(this),msg.sender,tokenAmount);
             }
             else{
                 withdrawReward(2);
-                transfer(msg.sender,tokenAmount);
+                _transfer(address(this),msg.sender,tokenAmount);
             }
              
             userInvestment[msg.sender].stakedBal2 = 0;
@@ -550,11 +560,11 @@ contract LCARBON is TOKEN{
             if(userInvestment[msg.sender].lockTime3 > block.timestamp){
                 tokenAmount = tokenAmount - tokenAmount.div(2); // 50% penality
                 rewardsBeforeNewStake3[msg.sender] = 0 ;
-                transfer(msg.sender,tokenAmount);
+                _transfer(address(this),msg.sender,tokenAmount);
             }
             else{ 
                 withdrawReward(3);
-                transfer(msg.sender,tokenAmount);
+                _transfer(address(this),msg.sender,tokenAmount);
             }
              
             userInvestment[msg.sender].stakedBal3 = 0;
