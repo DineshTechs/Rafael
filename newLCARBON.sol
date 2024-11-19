@@ -360,6 +360,9 @@ contract TOKEN is ERC20 {
         if(!user[msg.sender].isExist){
             numberOfParticipants = numberOfParticipants + 1;
         }
+        else{
+            user[msg.sender].isExist = true;
+        }
       
         amount = amount * 1e18;
         uint256 usdToTokens = SafeMath.div(amount, price);
@@ -624,7 +627,7 @@ contract LCARBON is TOKEN{
             rewards = IntervalRewardsOf(msg.sender,2);
             rewards = rewards + rewardsBeforeNewStake2[msg.sender]; 
             rewardsBeforeNewStake2[msg.sender] = 0;
-            
+
             ////////////////////////////////////////////
             timeDiff = getTime().sub(userInvestment[msg.sender].stakeTime2);
             intervals = timeDiff.div(rewardInterval);
