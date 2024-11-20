@@ -424,7 +424,7 @@ contract LCARBON is TOKEN{
         rewardRates[1] = 3300;    // 0.03% = amount/3300 =  per day reward
         rewardRates[2] = 2000;    // 0.05% = amount/2000 = per day reward
         rewardRates[3] = 1000; //   0.1% = amount/1000 = per day reward
-        rewardRates[3] = 400; //   0.25% = amount/400 = per day reward
+        rewardRates[4] = 400; //   0.25% = amount/400 = per day reward
 
         lockTime[1] = block.timestamp + 30 days;
         lockTime[2] = block.timestamp + 90 days;
@@ -463,7 +463,7 @@ contract LCARBON is TOKEN{
                 amountStillInStake = amountStillInStake - userStakes[i].amount;
             }
             if(userStakes[i].lockTime > block.timestamp){
-                totalAmount = userStakes[i].amount.div(2); // 50% penality and no rewards
+                totalAmount += userStakes[i].amount.div(2); // 50% penality and no rewards
             }
             else{
                 reward = calculateSingleStakeReward(msg.sender,i);
