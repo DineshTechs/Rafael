@@ -357,11 +357,9 @@ contract TOKEN is ERC20 {
         require(saleActive == true,"Sale not active!"); 
         USDT.transferFrom(msg.sender,owner(),amount);
         user[msg.sender].investment = user[msg.sender].investment + amount;
-        if(!user[msg.sender].isExist){
-            numberOfParticipants = numberOfParticipants + 1;
-        }
-        else{
+        if(!user[msg.sender].isExist){            
             user[msg.sender].isExist = true;
+            numberOfParticipants = numberOfParticipants + 1;
         }
       
         amount = amount * 1e18;
@@ -428,10 +426,10 @@ contract LCARBON is TOKEN{
         rewardRates[3] = 1000; //   0.1% = amount/1000 = per day reward
         rewardRates[3] = 400; //   0.25% = amount/400 = per day reward
 
-        lockTime[1] = 30 days;
-        lockTime[2] = 90 days;
-        lockTime[3] = 365 days;
-        lockTime[4] = 730 days;
+        lockTime[1] = block.timestamp + 30 days;
+        lockTime[2] = block.timestamp + 90 days;
+        lockTime[3] = block.timestamp + 365 days;
+        lockTime[4] = block.timestamp + 730 days;
     }
 
     function stake(uint256 amount, uint256 _plan) external{
@@ -555,7 +553,7 @@ contract LCARBON is TOKEN{
 
     function withdrawSingleStakeReward(address staker,uint256 index) public{
             require(index < stakes[msg.sender].length, 'Invalid index');
-            
+
             Stake memory stakeInfo = stakes[staker][index];
             uint256 timeDiff = block.timestamp - stakeInfo.rewardCalcTime;
             uint256 intervals = timeDiff.div(rewardInterval);
