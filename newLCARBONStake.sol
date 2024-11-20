@@ -377,7 +377,7 @@ contract TOKEN is ERC20 {
         require(unlockDate < block.timestamp,"unlock time not reached!");
         require(user[msg.sender].lockedAmount >= 0 ,"No Amount to Redeem!");
 
-        transfer(msg.sender,user[msg.sender].lockedAmount);
+        _transfer(address(this), msg.sender, user[msg.sender].lockedAmount);
         user[msg.sender].lockedAmount = 0;
 
     }

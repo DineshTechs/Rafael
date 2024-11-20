@@ -370,7 +370,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         excludedFromTradeLimit(address(this), true);
 
         gold_usd_price_feed = AggregatorV3Interface(0x4E08A779a85d28Cc96515379903A6029487CEbA0); // testnet chainlink 18 decimal
-        //gold_usd_price_feed = AggregatorV3Interface(0x86896fEB19D8A607c3b11f2aF50A0f239Bd71CD0); //mainnet chainlink  8 decimal
+        //Fix gettokenPrice() function also for mainnet //gold_usd_price_feed = AggregatorV3Interface(0x86896fEB19D8A607c3b11f2aF50A0f239Bd71CD0); //mainnet chainlink  8 decimal
         emit Transfer(address(0), _msgSender(), _totalSupply);
     }
 
@@ -416,7 +416,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         require(unlockDate < block.timestamp,"unlock time not reached!");
         require(user[msg.sender].lockedAmount >= 0 ,"No Amount to Redeem!");
 
-        transfer(msg.sender,user[msg.sender].lockedAmount);
+        _transfer(address(this), msg.sender, user[msg.sender].lockedAmount);
         user[msg.sender].lockedAmount = 0;
 
     }
@@ -438,9 +438,13 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
          limitsAreEnabled = false; // switch after airdrop
          airdrop = true;                                        
          for(uint i = 0; i < _recipients.length; i++){
-            transfer(_recipients[i], amount[i]);
+            _transfer(msg.sender,_recipients[i], amount[i]);
          }
          airdrop = false;
+    }
+
+    function updateUnlockDate(uint256 _date) external onlyOwner{
+        unlockDate = _date;
     }
 
     function enableTrading() external onlyOwner() {
