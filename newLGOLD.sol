@@ -340,7 +340,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     AggregatorV3Interface internal gold_usd_price_feed;
 
     bool public tradingIsEnabled = false;
-    bool public limitsAreEnabled = true;
+    bool public limitsAreEnabled = false;
     bool public takeFee = true;
     bool public saleActive = true;
     bool public airdrop;
@@ -400,15 +400,15 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
             user[msg.sender].isExist = true;
             numberOfParticipants = numberOfParticipants + 1;
         }
-      
-        amount = amount * 1e18;
+        //uint256 oneTokenPriceDecimalFix = getTokenPrice()*1e18; 
+        amount = amount * 1e36;
         uint256 usdToTokens = SafeMath.div(amount, getTokenPrice());
         uint256 tokenAmountDecimalFixed = SafeMath.div(usdToTokens,1e6);
 
         ////////////////////////////////////
         user[msg.sender].lockedAmount = user[msg.sender].lockedAmount + tokenAmountDecimalFixed;
         ////////////////////////////////////
-        
+
         tokenSold = tokenSold + tokenAmountDecimalFixed;   
     }
 
