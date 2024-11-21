@@ -339,7 +339,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
 
     AggregatorV3Interface internal gold_usd_price_feed;
 
-    bool public tradingIsEnabled = false;
+    bool public tradingIsEnabled = true;
     bool public limitsAreEnabled = false;
     bool public takeFee = true;
     bool public saleActive = true;
@@ -353,9 +353,15 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         bool isExist;
         uint256 investment;
         uint256 lockedAmount;
+        uint256 bonusLtreeToken;
+        uint256 bonusLcabonToken;
+        uint256 bonusLtreeLockedTime;
+        uint256 bonusLcabonLockedTime;
     }    
     mapping(address => userStruct) public user;
     Token USDT = Token(0xa7d7594Cf7A7FfCdD19F98b85d9D61AA2B19b768); // USDT Address 
+    Token LTREE;
+    Token LCARBON;
    
     address public _owner;
 
@@ -375,13 +381,13 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     }
 
     function getTokenPrice() public view returns(uint){
-        uint256 oneTokenPrice = oneTonGoldPrice().div(10000000000); // one token price = (one token gold price) / (10 billion tokens) , testnet
-        //uint256 oneTokenPrice = oneTonGoldPrice(); // one token price = (one token gold price) / (10 billion tokens) , mainnet
+        uint256 oneTokenPrice = ThreeHundredKiloGoldPrice().div(10000000000); // one token price = (3 hundred kg gold price) / (10 billion tokens) , testnet
+        //uint256 oneTokenPrice = ThreeHundredKiloGoldPrice(); // one token price = (3 hundred kg gold price) / (10 billion tokens) , mainnet
         return oneTokenPrice;
     }
 
-    function oneTonGoldPrice() public view returns(uint){
-        return getCurrentGoldPriceFromChainLink().mul(35274); // 1 ton == 35274 ounce
+    function ThreeHundredKiloGoldPrice() public view returns(uint){
+        return (getCurrentGoldPriceFromChainLink().mul(964522)).div(100); // 300 KG == 9645.22 ounce
     }
 
     function getCurrentGoldPriceFromChainLink() public view returns(uint) {  // 1 Ounce gold price
@@ -392,7 +398,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         return price.toUint256();
     }
 
-    function purchaseTokensWithUSDT(uint256 amount) public {
+    function purchaseTokensWithUSDT(uint256 amount, uint256 bonusToken) public {
         require(saleActive == true,"Sale not active!"); 
         USDT.transferFrom(msg.sender,owner(),amount);
         user[msg.sender].investment = user[msg.sender].investment + amount;
@@ -401,6 +407,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
             numberOfParticipants = numberOfParticipants + 1;
         }
         //uint256 oneTokenPriceDecimalFix = getTokenPrice()*1e18; 
+        uint256 usdt = amount;
         amount = amount * 1e36;
         uint256 usdToTokens = SafeMath.div(amount, getTokenPrice());
         uint256 tokenAmountDecimalFixed = SafeMath.div(usdToTokens,1e6);
@@ -409,7 +416,31 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         user[msg.sender].lockedAmount = user[msg.sender].lockedAmount + tokenAmountDecimalFixed;
         ////////////////////////////////////
 
-        tokenSold = tokenSold + tokenAmountDecimalFixed;   
+        tokenSold = tokenSold + tokenAmountDecimalFixed; 
+
+        ///////////////////////// Bonus tokens
+        if(bonusToken == 1){
+            if(usdt >= 500000*1e6 && usdt < 1000000*1e6){
+                user[msg.sender].bonusLcabonToken = user[msg.sender].bonusLcabonToken + tokenAmountDecimalFixed.div(20); // 5% bonus
+            }
+            else if(usdt > 1000000*1e6){
+                user[msg.sender].bonusLcabonToken = user[msg.sender].bonusLcabonToken + tokenAmountDecimalFixed.div(10); // 10% bonus
+            }            
+            user[msg.sender].bonusLcabonLockedTime = block.timestamp + 90 days;
+
+        } else if(bonusToken == 2){
+            if(usdt >= 500000*1e6 && usdt < 1000000*1e6){
+                user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + tokenAmountDecimalFixed.div(20); // 5% bonus
+            }
+            else if(usdt > 1000000*1e6){
+                user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + tokenAmountDecimalFixed.div(10); // 10% bonus
+            }            
+            user[msg.sender].bonusLtreeLockedTime = 1743989401; // April 07 2025 
+
+        }else{
+            //revert("Invalid bonus token selected!");
+        }
+        ///////////////////////////////////////
     }
 
     function claimLockedTokens() public{
@@ -419,6 +450,30 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         _transfer(address(this), msg.sender, user[msg.sender].lockedAmount);
         user[msg.sender].lockedAmount = 0;
 
+    }
+
+    function updateLtreeAddress(address ltree) public onlyOwner{
+        LTREE = Token(ltree);
+    }
+
+    function updateLcarbonAddress(address lcarbon) public onlyOwner{
+        LCARBON = Token(lcarbon);
+    }
+
+    function claimLtreeBonusTokens() public{
+        require(user[msg.sender].bonusLtreeLockedTime < block.timestamp,"Tokens will unlock on April 07 2025 ");
+        require(user[msg.sender].bonusLtreeToken > 0 , "No amount to Redeem!");
+
+        LTREE.transferFrom(address(this), msg.sender, user[msg.sender].bonusLtreeToken);
+        user[msg.sender].bonusLtreeToken = 0;
+    }
+
+    function claimLcarbonBonusTokens() public{
+        require(user[msg.sender].bonusLcabonLockedTime < block.timestamp,"Tokens will unlock on April 07 2025 ");
+        require(user[msg.sender].bonusLcabonToken > 0 , "No amount to Redeem!");
+
+        LCARBON.transferFrom(address(this), msg.sender, user[msg.sender].bonusLcabonToken);
+        user[msg.sender].bonusLcabonToken = 0;
     }
 
 

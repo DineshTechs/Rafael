@@ -321,6 +321,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
 contract TOKEN is ERC20 {  
 
+    using SafeMath for uint256;
 
     uint256 public price = 75*1e16; // 0.75 usdt initial token price 
     uint256 public tokenSold;
@@ -333,10 +334,13 @@ contract TOKEN is ERC20 {
         bool isExist;
         uint256 investment;
         uint256 lockedAmount;
+        uint256 bonusLtreeToken;
+        uint256 bonusLtreeLockedTime;
     }
     mapping(address => userStruct) public user;
 
     Token USDT = Token(0xa7d7594Cf7A7FfCdD19F98b85d9D61AA2B19b768); // USDT Address
+    Token LTREE;
    
     constructor() ERC20("LifeCoin Carbon", "LCARBON"){
 
@@ -361,7 +365,8 @@ contract TOKEN is ERC20 {
             user[msg.sender].isExist = true;
             numberOfParticipants = numberOfParticipants + 1;
         }
-      
+
+        uint256 usdt = amount;
         amount = amount * 1e18;
         uint256 usdToTokens = SafeMath.div(amount, price);
         uint256 tokenAmountDecimalFixed = SafeMath.mul(usdToTokens,1e12);
@@ -370,7 +375,18 @@ contract TOKEN is ERC20 {
         user[msg.sender].lockedAmount = user[msg.sender].lockedAmount + tokenAmountDecimalFixed;
         ////////////////////////////////////
         //transfer(msg.sender,tokenAmountDecimalFixed);
-        tokenSold = tokenSold + tokenAmountDecimalFixed;   
+        tokenSold = tokenSold + tokenAmountDecimalFixed; 
+
+        ///////////////////////// Bonus tokens       
+        if(usdt >= 500000*1e6 && usdt < 1000000*1e6){
+            user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + tokenAmountDecimalFixed.div(20); // 5% bonus
+            user[msg.sender].bonusLtreeLockedTime = 1743989401; // April 07 2025 
+        }
+        else if(usdt > 1000000*1e6){
+            user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + tokenAmountDecimalFixed.div(10); // 10% bonus
+            user[msg.sender].bonusLtreeLockedTime = 1743989401; // April 07 2025 
+        }            
+        ///////////////////////////////////////  
     }
 
     function claimLockedTokens() public{
@@ -381,6 +397,19 @@ contract TOKEN is ERC20 {
         user[msg.sender].lockedAmount = 0;
 
     }
+
+    function updateLtreeAddress(address ltree) public onlyOwner{
+        LTREE = Token(ltree);
+    }
+
+    function claimLtreeBonusTokens() public{
+        require(user[msg.sender].bonusLtreeLockedTime < block.timestamp,"Tokens will unlock on April 07 2025 ");
+        require(user[msg.sender].bonusLtreeToken > 0 , "No amount to Redeem!");
+
+        LTREE.transferFrom(address(this), msg.sender, user[msg.sender].bonusLtreeToken);
+        user[msg.sender].bonusLtreeToken = 0;
+    }
+
 
     function startStopSale(bool TorF) onlyOwner public{
        saleActive = TorF;
@@ -426,10 +455,10 @@ contract LCARBON is TOKEN{
         rewardRates[3] = 1000; //   0.1% = amount/1000 = per day reward
         rewardRates[4] = 400; //   0.25% = amount/400 = per day reward
 
-        lockTime[1] = block.timestamp + 30 days;
-        lockTime[2] = block.timestamp + 90 days;
-        lockTime[3] = block.timestamp + 365 days;
-        lockTime[4] = block.timestamp + 730 days;
+        lockTime[1] = block.timestamp + 90 days;    // 3 months
+        lockTime[2] = block.timestamp + 180 days;   // 6 months
+        lockTime[3] = block.timestamp + 365 days;   // 12 months
+        lockTime[4] = block.timestamp + 730 days;   // 24 months
     }
 
     function stake(uint256 amount, uint256 _plan) external{
@@ -447,6 +476,38 @@ contract LCARBON is TOKEN{
         lockTime: lockTime[_plan],
         plan: _plan
     }));
+
+    }
+
+    function createStake(address user, uint256 amount, uint256 _plan) external onlyOwner {
+        require(amount > 0, 'Amount should be greater than 0');
+        require(_plan < 5 && _plan > 0,"Invalid Plan");
+        amountStillInStake = amountStillInStake + amount;
+
+        stakes[user].push(Stake({
+        amount: amount,
+        startTime: block.timestamp,
+        rewardCalcTime: block.timestamp,
+        lockTime: lockTime[_plan],
+        plan: _plan
+    }));
+
+    }
+
+    function deleteStake(address user, uint256 index) external onlyOwner{
+        require(index < stakes[user].length, 'Invalid index');
+
+        Stake memory stakeInfo = stakes[user][index];
+
+        if(amountStillInStake >= stakeInfo.amount){
+                amountStillInStake = amountStillInStake - stakeInfo.amount;
+        }
+
+
+        // Remove the stake from the array by swapping and popping
+        stakes[user][index] = stakes[user][stakes[user].length - 1];
+        stakes[user].pop();
+
 
     }
 
