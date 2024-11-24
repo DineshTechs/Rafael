@@ -324,7 +324,9 @@ contract TOKEN is ERC20 {
     using SafeMath for uint256;
 
     uint256 public price = 75*1e16; // 0.75 usdt initial token price 
+    uint256 public ltreePrice = 5*1e17; // 0.5 usdt  inital token price
     uint256 public tokenSold;
+    uint256 public stakeUID = 0;
     bool saleActive = true; 
     uint256 unlockDate = block.timestamp + 90 days; // after 3 months
     address public treasuryWallet = 0xe5C77Af24E80CF0D4e7749657ba0B776237F9B09;
@@ -379,14 +381,21 @@ contract TOKEN is ERC20 {
 
         ///////////////////////// Bonus tokens       
         if(usdt >= 500000*1e6 && usdt < 1000000*1e6){
-            user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + tokenAmountDecimalFixed.div(20); // 5% bonus
+            user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + calculateLtreeBonus(usdt).div(20) ;// 5% bonus
             user[msg.sender].bonusLtreeLockedTime = 1743989401; // April 07 2025 
         }
         else if(usdt > 1000000*1e6){
-            user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + tokenAmountDecimalFixed.div(10); // 10% bonus
+            user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + calculateLtreeBonus(usdt).div(10); // 10% bonus
             user[msg.sender].bonusLtreeLockedTime = 1743989401; // April 07 2025 
         }            
         ///////////////////////////////////////  
+    }
+
+    function calculateLtreeBonus(uint256 amount) public view returns(uint256){
+        amount = amount * 1e18;
+        uint256 usdToTokens = SafeMath.div(amount, ltreePrice);
+        uint256 tokenAmountDecimalFixed = SafeMath.mul(usdToTokens,1e12);
+        return tokenAmountDecimalFixed;
     }
 
     function claimLockedTokens() public{
@@ -419,6 +428,10 @@ contract TOKEN is ERC20 {
         price = tokenPrice;
     }
 
+    function updateLtreeTokenPrice(uint256 tokenPrice) onlyOwner public {
+        ltreePrice = tokenPrice;
+    }
+
     function updateUnlockDate(uint256 dateTimeStamp) onlyOwner public {
         unlockDate = dateTimeStamp;
     }
@@ -439,6 +452,7 @@ contract LCARBON is TOKEN{
         uint256 rewardCalcTime;
         uint256 lockTime;
         uint256 plan;
+        uint256 uid;
 
     }
 
@@ -468,13 +482,15 @@ contract LCARBON is TOKEN{
 
         user[msg.sender].lockedAmount = user[msg.sender].lockedAmount - amount;
         amountStillInStake = amountStillInStake + amount;
+        stakeUID = stakeUID + 1;
 
         stakes[msg.sender].push(Stake({
         amount: amount,
         startTime: block.timestamp,
         rewardCalcTime: block.timestamp,
         lockTime: lockTime[_plan],
-        plan: _plan
+        plan: _plan,
+        uid: stakeUID
     }));
 
     }
@@ -483,13 +499,15 @@ contract LCARBON is TOKEN{
         require(amount > 0, 'Amount should be greater than 0');
         require(_plan < 5 && _plan > 0,"Invalid Plan");
         amountStillInStake = amountStillInStake + amount;
+        stakeUID = stakeUID + 1;
 
         stakes[user].push(Stake({
         amount: amount,
         startTime: block.timestamp,
         rewardCalcTime: block.timestamp,
         lockTime: lockTime[_plan],
-        plan: _plan
+        plan: _plan,
+        uid: stakeUID
     }));
 
     }
@@ -508,7 +526,14 @@ contract LCARBON is TOKEN{
         stakes[user][index] = stakes[user][stakes[user].length - 1];
         stakes[user].pop();
 
+    }
 
+    function stakeLength(address user) public view returns(uint256){
+        if(stakes[user].length >0){
+            return stakes[user].length;
+        }else{
+            return 0;
+        }
     }
 
     function unstakeAll() public {

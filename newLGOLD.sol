@@ -330,7 +330,10 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     address public transferFeesAddress = 0xe5C77Af24E80CF0D4e7749657ba0B776237F9B09;    
     uint256 public numberOfParticipants = 0;
     uint256 public tokenSold = 0;
-    uint256 unlockDate = block.timestamp + 60 days; // after 2 months
+    uint256 public ltreePrice = 5*1e17; // 0.5 usdt  inital token price
+    uint256 public lcarbonPrice = 75*1e16; // 0.75 usdt initial token price 
+
+    uint256 public unlockDate =  block.timestamp + 60 days; // after 2 months
 
     uint256 public MaxTradeLimit = 50000000 * 10**18;   
 
@@ -421,19 +424,19 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         ///////////////////////// Bonus tokens
         if(bonusToken == 1){
             if(usdt >= 500000*1e6 && usdt < 1000000*1e6){
-                user[msg.sender].bonusLcabonToken = user[msg.sender].bonusLcabonToken + tokenAmountDecimalFixed.div(20); // 5% bonus
+                user[msg.sender].bonusLcabonToken = user[msg.sender].bonusLcabonToken + calculateLcarbonBonus(usdt).div(20); // 5% bonus
             }
             else if(usdt > 1000000*1e6){
-                user[msg.sender].bonusLcabonToken = user[msg.sender].bonusLcabonToken + tokenAmountDecimalFixed.div(10); // 10% bonus
+                user[msg.sender].bonusLcabonToken = user[msg.sender].bonusLcabonToken + calculateLcarbonBonus(usdt).div(10); // 10% bonus
             }            
-            user[msg.sender].bonusLcabonLockedTime = block.timestamp + 90 days;
+            user[msg.sender].bonusLcabonLockedTime = 1740681001; // 28 feb 2025
 
         } else if(bonusToken == 2){
             if(usdt >= 500000*1e6 && usdt < 1000000*1e6){
-                user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + tokenAmountDecimalFixed.div(20); // 5% bonus
+                user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + calculateLtreeBonus(usdt).div(20); // 5% bonus
             }
             else if(usdt > 1000000*1e6){
-                user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + tokenAmountDecimalFixed.div(10); // 10% bonus
+                user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + calculateLtreeBonus(usdt).div(10); // 10% bonus
             }            
             user[msg.sender].bonusLtreeLockedTime = 1743989401; // April 07 2025 
 
@@ -441,6 +444,22 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
             //revert("Invalid bonus token selected!");
         }
         ///////////////////////////////////////
+    }
+
+    
+    function calculateLtreeBonus(uint256 amount) public view returns(uint256){
+        amount = amount * 1e18;
+        uint256 usdToTokens = SafeMath.div(amount, ltreePrice);
+        uint256 tokenAmountDecimalFixed = SafeMath.mul(usdToTokens,1e12);
+        return tokenAmountDecimalFixed;
+    }
+
+    
+    function calculateLcarbonBonus(uint256 amount) public view returns(uint256){
+        amount = amount * 1e18;
+        uint256 usdToTokens = SafeMath.div(amount, lcarbonPrice);
+        uint256 tokenAmountDecimalFixed = SafeMath.mul(usdToTokens,1e12);
+        return tokenAmountDecimalFixed;
     }
 
     function claimLockedTokens() public{
@@ -455,10 +474,19 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     function updateLtreeAddress(address ltree) public onlyOwner{
         LTREE = Token(ltree);
     }
+    
+    function updateLtreeTokenPrice(uint256 tokenPrice) onlyOwner public {
+        ltreePrice = tokenPrice;
+    }
 
     function updateLcarbonAddress(address lcarbon) public onlyOwner{
         LCARBON = Token(lcarbon);
     }
+
+    function updateLcarbonTokenPrice(uint256 tokenPrice) public onlyOwner{
+        lcarbonPrice = tokenPrice;
+    }
+
 
     function claimLtreeBonusTokens() public{
         require(user[msg.sender].bonusLtreeLockedTime < block.timestamp,"Tokens will unlock on April 07 2025 ");

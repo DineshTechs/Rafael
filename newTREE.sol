@@ -308,12 +308,12 @@ contract LTREE is Context, Ownable, IERC20, ERC20Detailed {
 
     uint256 internal _totalSupply;
 
-    uint256 public price = 5*10e17;  // 0.5 usdt
+    uint256 public price = 5*1e17;  // 0.5 usdt
     uint256 public transactionFee;   
     address public transferFeesAddress = 0xe5C77Af24E80CF0D4e7749657ba0B776237F9B09;    
     uint256 public numberOfParticipants = 0;
     uint256 public tokenSold = 0;
-    uint256 unlockDate = 1743989401; // April 07 2025 
+    uint256 public unlockDate = 1743989401; // April 07 2025 
 
     uint256 public MaxTradeLimit = 50000000 * 10**18;   
 
