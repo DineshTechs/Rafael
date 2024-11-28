@@ -459,7 +459,7 @@ contract LCARBON is TOKEN{
     mapping(address => Stake[]) public stakes;
     mapping(uint256 => uint256) public rewardRates;
     mapping(uint256 => uint256) public lockTime;
-    uint256 public amountStillInStake = 0;
+    uint256 public amountStillInStake = 0;    
     uint256 internal rewardInterval = 86400 * 1;
 
 
@@ -522,7 +522,7 @@ contract LCARBON is TOKEN{
         }
 
 
-        // Remove the stake from the array by swapping and popping
+        // Remove the stake from the array by swapping and popping 
         stakes[user][index] = stakes[user][stakes[user].length - 1];
         stakes[user].pop();
 
@@ -583,8 +583,8 @@ contract LCARBON is TOKEN{
         return totalReward;
     }
     
-    function withdrawAllStakeReward(address staker) public{
-        Stake[] memory userStakes = stakes[staker];
+    function withdrawAllStakeReward() public{
+        Stake[] memory userStakes = stakes[msg.sender];
         require(userStakes.length > 0, 'No active stakes');
 
         uint256 totalReward = 0;
@@ -592,7 +592,10 @@ contract LCARBON is TOKEN{
         for (uint256 i = 0; i < userStakes.length; i++) {
             Stake memory stakeInfo = userStakes[i];
             uint256 timeDiff = block.timestamp - stakeInfo.rewardCalcTime;
-            stakeInfo.rewardCalcTime = block.timestamp;
+            //***update time
+            stakes[msg.sender][i].rewardCalcTime = block.timestamp;
+            //stakeInfo.rewardCalcTime = block.timestamp;
+            //**************
             uint256 intervals = timeDiff.div(rewardInterval);
             uint256 perIntervalReward = stakeInfo.amount.div(rewardRates[stakeInfo.plan]); 
             uint256 reward = intervals.mul(perIntervalReward);
@@ -637,17 +640,20 @@ contract LCARBON is TOKEN{
             return reward;
     }
 
-    function withdrawSingleStakeReward(address staker,uint256 index) public{
+    function withdrawSingleStakeReward(uint256 index) public{
             require(index < stakes[msg.sender].length, 'Invalid index');
 
-            Stake memory stakeInfo = stakes[staker][index];
+            Stake memory stakeInfo = stakes[msg.sender][index];
             uint256 timeDiff = block.timestamp - stakeInfo.rewardCalcTime;
             uint256 intervals = timeDiff.div(rewardInterval);
             uint256 perIntervalReward = stakeInfo.amount.div(rewardRates[stakeInfo.plan]); 
             uint256 reward = intervals.mul(perIntervalReward);
 
-             _transfer(address(this),msg.sender,reward);
-             stakeInfo.rewardCalcTime = block.timestamp;
+            _transfer(address(this),msg.sender,reward);
+            //***update time
+            stakes[msg.sender][index].rewardCalcTime = block.timestamp;
+            //stakeInfo.rewardCalcTime = block.timestamp;
+            //**************
 
     }
 
