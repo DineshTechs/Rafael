@@ -334,7 +334,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     uint256 public ltreePrice = 5*1e17; // 0.5 usdt  inital token price
     uint256 public lcarbonPrice = 75*1e16; // 0.75 usdt initial token price 
 
-    uint256 public carbonBonusUnlockTime = 1740681001;  // 28 feb 2025
+    uint256 public carbonBonusUnlockTime = 1746015152;  // April 30 2025
     uint256 public treeBonusUnlockTime = 1743989401; // April 07 2025 
 
     uint256 public MaxTradeLimit = 50000000 * 10**18;   
@@ -439,7 +439,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
         _uid = _uid + 1;
         purchases[msg.sender].push(purchase({
             lockedAmount:tokenAmountDecimalFixed,
-            unlockDate : block.timestamp + 60 days,
+            unlockDate : block.timestamp + 120 days,
             uid:_uid
         }));
 

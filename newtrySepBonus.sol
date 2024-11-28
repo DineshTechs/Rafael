@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.15;
+pragma solidity =0.8.25;
  
 library SafeCast {
     /**
@@ -327,49 +327,88 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     uint256 internal _totalSupply;
 
     uint256 public transactionFee;   
-    address public transferFeesAddress = 0xe5C77Af24E80CF0D4e7749657ba0B776237F9B09;
+    address public transferFeesAddress = 0xe5C77Af24E80CF0D4e7749657ba0B776237F9B09;    
+    uint256 public numberOfParticipants = 0;
+    uint256 public tokenSold = 0;
+    uint256 public _uid = 0;
+    uint256 public ltreePrice = 5*1e17; // 0.5 usdt  inital token price
+    uint256 public lcarbonPrice = 75*1e16; // 0.75 usdt initial token price 
 
-    uint256 public MaxTradeLimit = 50000000 * 10**18;     
-    uint256 public maxWalletBalance = 100000000 * 10**18;  
+    uint256 public carbonBonusUnlockTime = block.timestamp + 60;  // 6 days after purchase
+    uint256 public treeBonusUnlockTime = 1743989401; // April 07 2025 
+
+    uint256 public MaxTradeLimit = 50000000 * 10**18;   
 
     uint256 public antiBotBuyCoolDown = 5 seconds;
     uint256 public antiBotSellCoolDown = 30 seconds;
 
     AggregatorV3Interface internal gold_usd_price_feed;
 
-    bool public tradingIsEnabled = false;
-    bool public limitsAreEnabled = true;
+    bool public tradingIsEnabled = true;
+    bool public limitsAreEnabled = false;
     bool public takeFee = true;
+    bool public saleActive = true;
     bool public airdrop;
 
     event ExcludedFromTradeLimit(address indexed account, bool isExcluded);
     event SetAutomatedMarketMakerPair(address indexed pair, bool indexed value);
 
+    
+     struct userStruct{
+        bool isExist;
+        uint256 investment;
+        uint256 bonusLtreeToken;
+        uint256 bonusLcabonToken;
+        uint256 bonusLtreeLockedTime;
+        uint256 bonusLcabonLockedTime;
+    }    
+    mapping(address => userStruct) public user;
+
+    
+    struct purchase{
+        uint256 lockedAmount;
+        uint256 unlockDate;
+        uint256 uid;
+    }
+    mapping(address => purchase[]) public purchases;
+
+    struct bonus{
+        uint256 bonusAmount;
+        uint256 unlockDate;
+        uint256 uid;
+    }
+    mapping(address => bonus[]) public bonuses;
+
+
+    Token USDT = Token(0xa7d7594Cf7A7FfCdD19F98b85d9D61AA2B19b768); // USDT Address 
+    Token LTREE;
+    Token LCARBON;
    
     address public _owner;
 
     constructor() ERC20Detailed("LifeCoin Gold", "LGOLD", 18) {
         _owner = msg.sender;
         _totalSupply = 10_000_000_000 * (10**18);
-        transactionFee = 5; // 5/1000 = 0.005
+        transactionFee = 5; // 5/1000 = 0.005/100 = 0.005%
 
         _balances[_owner] = _totalSupply;      
 
         excludedFromTradeLimit(msg.sender, true);
         excludedFromTradeLimit(address(this), true);
 
-        gold_usd_price_feed = AggregatorV3Interface(0x4E08A779a85d28Cc96515379903A6029487CEbA0); // testnet chainlink
-        //gold_usd_price_feed = AggregatorV3Interface(0x86896fEB19D8A607c3b11f2aF50A0f239Bd71CD0); //mainnet chainlink  
+        gold_usd_price_feed = AggregatorV3Interface(0x4E08A779a85d28Cc96515379903A6029487CEbA0); // testnet chainlink 18 decimal
+        //Fix gettokenPrice() function also for mainnet //gold_usd_price_feed = AggregatorV3Interface(0x86896fEB19D8A607c3b11f2aF50A0f239Bd71CD0); //mainnet chainlink  8 decimal
         emit Transfer(address(0), _msgSender(), _totalSupply);
     }
 
-    function getTokenPrice() external view returns(uint){
-        uint256 oneTokenPrice = oneTonGoldPrice().div(10000000000); 
+    function getTokenPrice() public view returns(uint){
+        uint256 oneTokenPrice = ThreeHundredKiloGoldPrice().div(10000000000); // one token price = (3 hundred kg gold price) / (10 billion tokens) , testnet
+        //uint256 oneTokenPrice = ThreeHundredKiloGoldPrice(); // one token price = (3 hundred kg gold price) / (10 billion tokens) , mainnet
         return oneTokenPrice;
     }
 
-    function oneTonGoldPrice() public view returns(uint){
-        return getCurrentGoldPriceFromChainLink().mul(35274); // 1 ton == 35274 ounce
+    function ThreeHundredKiloGoldPrice() public view returns(uint){
+        return (getCurrentGoldPriceFromChainLink().mul(964522)).div(100); // 300 KG == 9645.22 ounce
     }
 
     function getCurrentGoldPriceFromChainLink() public view returns(uint) {  // 1 Ounce gold price
@@ -379,6 +418,160 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
 
         return price.toUint256();
     }
+
+    // function purchaseTokenWithUSDT_() public{
+    //     require(saleActive == true,"Sale not active!"); 
+    //     USDT.transferFrom(msg.sender,owner(),amount);
+
+    // }
+
+    function purchaseTokensWithUSDT(uint256 amount, uint256 bonusToken) public {
+        require(saleActive == true,"Sale not active!"); 
+        USDT.transferFrom(msg.sender,owner(),amount);
+        user[msg.sender].investment = user[msg.sender].investment + amount;
+        if(!user[msg.sender].isExist){            
+            user[msg.sender].isExist = true;
+            numberOfParticipants = numberOfParticipants + 1;
+        }
+        //uint256 oneTokenPriceDecimalFix = getTokenPrice()*1e18; 
+        uint256 usdt = amount;
+        amount = amount * 1e36;
+        uint256 usdToTokens = SafeMath.div(amount, getTokenPrice());
+        uint256 tokenAmountDecimalFixed = SafeMath.div(usdToTokens,1e6);
+
+        ////////////////////////////////////
+        //user[msg.sender].lockedAmount = user[msg.sender].lockedAmount + tokenAmountDecimalFixed;
+
+        _uid = _uid + 1;
+        purchases[msg.sender].push(purchase({
+            lockedAmount:tokenAmountDecimalFixed,
+            unlockDate : block.timestamp + 60 days,
+            uid:_uid
+        }));
+
+        tokenSold = tokenSold + tokenAmountDecimalFixed; 
+
+        ///////////////////////// Bonus tokens
+        if(bonusToken == 1){
+            if(usdt >= 500000*1e6 && usdt < 1000000*1e6){
+                ///////////////////////////////////////////////////////////////
+                bonuses[msg.sender].push(bonus({
+                    bonusAmount: calculateLcarbonBonus(usdt).div(20), // 5% bonus 
+                    unlockDate: carbonBonusUnlockTime,
+                    uid: _uid
+                }));
+                ///////////////////////////////////////////////////////////////
+            }
+            else if(usdt > 1000000*1e6){
+                ///////////////////////////////////////////////////////////////
+                bonuses[msg.sender].push(bonus({
+                    bonusAmount: calculateLcarbonBonus(usdt).div(10), // 10% bonus
+                    unlockDate: carbonBonusUnlockTime,
+                    uid: _uid
+                }));
+                ///////////////////////////////////////////////////////////////
+            }   
+        } else if(bonusToken == 2){
+            if(usdt >= 500000*1e6 && usdt < 1000000*1e6){
+                user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + calculateLtreeBonus(usdt).div(20); // 5% bonus          
+                user[msg.sender].bonusLtreeLockedTime = treeBonusUnlockTime;
+            }
+            else if(usdt > 1000000*1e6){
+                user[msg.sender].bonusLtreeToken = user[msg.sender].bonusLtreeToken + calculateLtreeBonus(usdt).div(10); // 10% bonus          
+                user[msg.sender].bonusLtreeLockedTime = treeBonusUnlockTime; 
+            }    
+
+        }else{
+            //revert("Invalid bonus token selected!");
+        }
+        ///////////////////////////////////////
+    }
+
+    
+    function calculateLtreeBonus(uint256 amount) public view returns(uint256){
+        amount = amount * 1e18;
+        uint256 usdToTokens = SafeMath.div(amount, ltreePrice);
+        uint256 tokenAmountDecimalFixed = SafeMath.mul(usdToTokens,1e12);
+        return tokenAmountDecimalFixed;
+    }
+
+    
+    function calculateLcarbonBonus(uint256 amount) public view returns(uint256){
+        amount = amount * 1e18;
+        uint256 usdToTokens = SafeMath.div(amount, lcarbonPrice);
+        uint256 tokenAmountDecimalFixed = SafeMath.mul(usdToTokens,1e12);
+        return tokenAmountDecimalFixed;
+    }
+    
+
+    function claimPurchasedTokens(uint256 index) public {
+        require(index < purchases[msg.sender].length, 'Invalid index');
+        purchase memory purchaseInfo = purchases[msg.sender][index];
+
+        if(purchaseInfo.unlockDate < block.timestamp){
+            _transfer(address(this), msg.sender, purchaseInfo.lockedAmount);
+        }
+        else{
+            revert("Unlock Time not Reached!");
+        }
+
+        // Remove the stake from the array by swapping and popping
+        purchases[msg.sender][index] = purchases[msg.sender][purchases[msg.sender].length - 1];
+        purchases[msg.sender].pop();
+
+    }
+
+    function bonusLength(address buyer) public view returns(uint256){
+        if(bonuses[buyer].length >0){
+            return bonuses[buyer].length;
+        }else{
+            return 0;
+        }
+    }
+
+    function totalPurchases(address buyer) public view returns(uint256){
+        if(purchases[buyer].length >0){
+            return purchases[buyer].length;
+        }else{
+            return 0;
+        }
+    }
+    
+
+    function updateLtreeAddress(address ltree) public onlyOwner{
+        LTREE = Token(ltree);
+    }
+    
+    function updateLtreeTokenPrice(uint256 tokenPrice) onlyOwner public {
+        ltreePrice = tokenPrice;
+    }
+
+    function updateLcarbonAddress(address lcarbon) public onlyOwner{
+        LCARBON = Token(lcarbon);
+    }
+
+    function updateLcarbonTokenPrice(uint256 tokenPrice) public onlyOwner{
+        lcarbonPrice = tokenPrice;
+    }
+
+
+    function claimLtreeBonusTokens() public{
+        require(user[msg.sender].bonusLtreeLockedTime < block.timestamp,"Tokens will unlock on April 07 2025 ");
+        require(user[msg.sender].bonusLtreeToken > 0 , "No amount to Redeem!");
+
+        LTREE.transferFrom(address(this), msg.sender, user[msg.sender].bonusLtreeToken);
+        user[msg.sender].bonusLtreeToken = 0;
+    }
+
+    function claimLcarbonBonusTokens() public{
+        require(user[msg.sender].bonusLcabonLockedTime < block.timestamp,"Tokens will unlock on Feb 28 2025 ");
+        require(user[msg.sender].bonusLcabonToken > 0 , "No amount to Redeem!");
+
+        LCARBON.transferFrom(address(this), msg.sender, user[msg.sender].bonusLcabonToken);
+        user[msg.sender].bonusLcabonToken = 0;
+    }
+
+
 
     function setTransferFeesAddress(address wallet) external onlyOwner(){
         transferFeesAddress = wallet;
@@ -395,11 +588,11 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
          limitsAreEnabled = false; // switch after airdrop
          airdrop = true;                                        
          for(uint i = 0; i < _recipients.length; i++){
-            transfer(_recipients[i], amount[i]);
+            _transfer(msg.sender,_recipients[i], amount[i]);
          }
          airdrop = false;
     }
-
+   
     function enableTrading() external onlyOwner() {
         require(!tradingIsEnabled, "Trading is already enabled");
         tradingIsEnabled = true;
@@ -410,13 +603,8 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     }
 
     function setMaxTradeLimit(uint256 _maxTradeLimit) external onlyOwner() {
-        require(_maxTradeLimit >= 1000, "Trade limit too small");
-        MaxTradeLimit = _maxTradeLimit * 10**decimals();
-    }
-
-    function setMaxWalletBalance(uint256 newMaxWalletBalance) external onlyOwner() {
-        require(newMaxWalletBalance >= 1000, "Wallet balance limit too small");
-        maxWalletBalance = newMaxWalletBalance * 10**decimals();
+        require(_maxTradeLimit >= 1000 *10**decimals(), "Trade limit too small");
+        MaxTradeLimit = _maxTradeLimit;
     }
 
     function excludedFromTradeLimit(address account, bool excluded) public onlyOwner() {
@@ -560,7 +748,7 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
 
 
         if (takeFee && !airdrop) {
-            uint256 txFeesAmount = amount.mul(transactionFee).div(1000); // 0.005 transaction fees
+            uint256 txFeesAmount = amount.mul(transactionFee).div(100000); // 0.005% transaction fees
             uint256 TotalSent = amount.sub(txFeesAmount);
             _balances[sender] = _balances[sender].sub(
                 amount,
@@ -611,4 +799,11 @@ contract LGOLD is Context, Ownable, IERC20, ERC20Detailed {
     }
 
     
+}
+
+abstract contract Token {
+    function transferFrom(address sender, address recipient, uint256 amount) virtual external;
+    function transfer(address recipient, uint256 amount) virtual external;
+    function balanceOf(address account) virtual external view returns (uint256)  ;
+
 }
